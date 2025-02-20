@@ -60,6 +60,8 @@ for c in cnts:
 		cv2.circle(orig, (int(x), int(y)), 5, (0, 0, 255), -1)
 		
 
+		
+
 
 	# unpack the ordered bounding box, then compute the midpoint
 	# between the top-left and top-right coordinates, followed by
@@ -91,9 +93,9 @@ for c in cnts:
 	# (in this case, inches)
 	if pixelsPerMetric is None:
 		pixelsPerMetric = dB / args["width"]
-		
+	
 
-    # compute the size of the object
+  # compute the size of the object
 	dimA = dA / pixelsPerMetric
 	dimB = dB / pixelsPerMetric
 	# draw the object sizes on the image
@@ -103,6 +105,15 @@ for c in cnts:
 	cv2.putText(orig, "{:.1f}in".format(dimB),
 		(int(trbrX + 10), int(trbrY)), cv2.FONT_HERSHEY_SIMPLEX,
 		0.65, (255, 255, 255), 2)
+	
 	# show the output image
-	cv2.imshow("Image", orig)
+	
+	scale = 30
+	width = int(orig.shape[1] * scale / 100)
+	length = int(orig.shape[0] * scale / 100)
+	smallDim = (width, length)
+	resized = cv2.resize(orig, smallDim)
+	cv2.imshow("Image", resized)
+	
 	cv2.waitKey(0)
+	cv2.destroyAllWindows()
