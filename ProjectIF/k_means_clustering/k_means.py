@@ -25,8 +25,12 @@ criteria = (cv2.TERM_CRITERIA_EPS + cv2.TERM_CRITERIA_MAX_ITER, 100, 0.85)
 
 # then perform k-means clustering with number of clusters defined as 3
 #also random centres are initially choosed for k-means clustering
-k = 5
+k = 6
 retval, labels, centers = cv2.kmeans(pixel_vals, k, None, criteria, 10, cv2.KMEANS_RANDOM_CENTERS)
+
+print(retval)
+print(labels)
+print(centers)
 
 # convert data into 8-bit values
 centers = np.uint8(centers)
