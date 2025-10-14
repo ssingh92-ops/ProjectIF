@@ -6,6 +6,9 @@ import copy
 import datetime
 import threading
 
+import serial
+import time
+
 from flask_babel import lazy_gettext
 
 from mycodo.databases.models import DeviceMeasurements
