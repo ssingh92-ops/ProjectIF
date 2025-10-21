@@ -15,3 +15,5 @@ from mycodo.utils.constraints_pass import constraints_pass_positive_value
 from mycodo.utils.database import db_retrieve_table_daemon
 from mycodo.utils.influx import add_measurements_influxdb
 from mycodo.utils.influx import read_influxdb_single
+
+# trying to write mycodo module from scratch
