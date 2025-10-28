@@ -1,15 +1,90 @@
+import numpy as np
+from PIL import Image
+
+
+imageloc = 'images/plant.jpg'
+
+
+image = Image.open(imageloc)
+image = np.array(image.convert("RGB"))
+
+
+# image = np.array(Image.open(imageloc).convert("RGB"))
+
+h, w, _ = image.shape
+
+# Define a center crop (e.g., central 20% of the image)
+crop_size = 1
+h0 = int(h * (0.5 - crop_size / 2))
+h1 = int(h * (0.5 + crop_size / 2))
+w0 = int(w * (0.5 - crop_size / 2))
+w1 = int(w * (0.5 + crop_size / 2))
+
+center_crop = image[h0:h1, w0:w1, :]
+
+import cv2
+center_crop_bgr = cv2.cvtColor(center_crop, cv2.COLOR_RGB2BGR)
+hsv = cv2.cvtColor(center_crop_bgr, cv2.COLOR_BGR2HSV)
+# Typical green range in HSV: 35-85
+mask = (hsv[...,0] > 35) & (hsv[...,0] < 85) & (hsv[...,1] > 50) & (hsv[...,2] > 50)
+candidates = np.argwhere(mask)
+if candidates.shape[0]:
+    center_y, center_x = np.array(mask.shape) // 2
+    dists = np.sum((candidates - [center_y, center_x])**2, axis=1)
+    chosen = candidates[np.argmin(dists)]
+    y_rel, x_rel = chosen
+    y_abs = y_rel + h0
+    x_abs = x_rel + w0
+    plantloc = [[x_abs, y_abs]]
+    print("Auto-selected leaf point (HSV):", plantloc)
+else:
+    print("No green region found.")
+
+
+
+
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+
+# If your crop is in RGB, convert to BGR for OpenCV, then to HSV
+center_crop_bgr = cv2.cvtColor(center_crop, cv2.COLOR_RGB2BGR)
+hsv = cv2.cvtColor(center_crop_bgr, cv2.COLOR_BGR2HSV)
+
+# Define green range (tweak these values as needed)
+mask = (hsv[...,0] > 35) & (hsv[...,0] < 85) & (hsv[...,1] > 50) & (hsv[...,2] > 50)
+
+# Convert boolean mask to uint8 for visualization (0 or 255)
+mask_img = (mask.astype(np.uint8)) * 255
+
+
+
+# Overlay the mask (in red) on the original crop for visualization
+overlay = center_crop.copy()
+overlay[mask] = [255, 0, 0]  # Mark green areas as red for contrast
+
+# plt.figure(figsize=(12, 6))
+# plt.subplot(1, 2, 1)
+# plt.imshow(center_crop)
+# plt.title("Original Photo")
+# plt.axis('off')
+# plt.subplot(1, 2, 2)
+# plt.imshow(overlay)
+# plt.title("Plant Segmented")
+# plt.axis('off')
+# plt.show()
+
+
 import os
 # if using Apple MPS, fall back to CPU for unsupported ops
 os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
-from PIL import Image
 
 
-imageloc = 'images/plant.jpg'
-plantloc = [[1500, 2000]]
 
+#plantloc = [[1500, 2000]]
 
 # select the device for computation
 if torch.cuda.is_available():
@@ -70,9 +145,11 @@ def show_masks(image, masks, scores, point_coords=None, box_coords=None, input_l
         plt.figure(figsize=(10, 10))
         plt.imshow(image)
         show_mask(mask, plt.gca(), borders=borders)
-        #if point_coords is not None:
-        #    assert input_labels is not None
-        #    show_points(point_coords, input_labels, plt.gca())
+
+        # REMOVE IF NO POINT
+        if point_coords is not None:
+           assert input_labels is not None
+           show_points(point_coords, input_labels, plt.gca())
         if box_coords is not None:
             # boxes
             show_box(box_coords, plt.gca())
@@ -84,16 +161,16 @@ def show_masks(image, masks, scores, point_coords=None, box_coords=None, input_l
 
 
 
-image = Image.open(imageloc)
-image = np.array(image.convert("RGB"))
-
 
 ## start segmenting - import checkpoints
 from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 sam2_checkpoint = "../checkpoints/sam2.1_hiera_large.pt"
+
+#sam2_checkpoint = "../checkpoints/sam2.1_hiera_tiny.pt"
 model_cfg = "configs/sam2.1/sam2.1_hiera_l.yaml"
+#model_cfg = "configs/sam2.1/sam2.1_hiera_t.yaml"
 
 sam2_model = build_sam2(model_cfg, sam2_checkpoint, device=device)
 
@@ -120,44 +197,28 @@ logits = logits[best]
 
 
 
-show_masks(image, [masks], [scores], point_coords=input_point, input_labels=input_label, borders=True)
-
-
-
-
-
-
-# # Ensure mask is binary (bool)
-# binary_mask = masks.astype(bool)
-
-# # Apply mask to the original image
-# segmented_image = np.zeros_like(image)
-# segmented_image[binary_mask] = image[binary_mask]
-
-# # Show the segmented part only (with background black)
-# plt.figure(figsize=(10, 10))
-# plt.imshow(segmented_image)
-# plt.axis('off')
-# plt.show()
+# show_masks(image, [masks], [scores], point_coords=input_point, input_labels=input_label, borders=True)
 
 
 
 binary_mask = masks.astype(bool)
 
-
 segmented_image = np.zeros_like(image)
 segmented_image[binary_mask] = image[binary_mask]
-fig, axs = plt.subplots(1, 2, figsize=(16, 8))
 
-# Original image
-axs[0].imshow(image)
-axs[0].set_title("Original Image")
-axs[0].axis('off')
+# fig, axs = plt.subplots(1, 2, figsize=(16, 8))
 
-# Segmented image
-axs[1].imshow(segmented_image)
-axs[1].set_title("Segmented Region Only")
-axs[1].axis('off')
+# axs[0].imshow(image)
+# axs[0].set_title("Original Image")
+# axs[0].axis('off')
 
-plt.tight_layout()
-plt.show()
+# axs[1].imshow(segmented_image)
+# axs[1].set_title("Segmented Region Only")
+# axs[1].axis('off')
+
+# plt.tight_layout()
+# plt.show()
+
+
+num_segmented_pixels = np.sum(binary_mask)
+print("Number of pixels: ", num_segmented_pixels)
